@@ -38,8 +38,11 @@ craft = (BASE_DIR / "CRAFT.md").read_text()
 
 # Extract voice Part 2 only (the novel-specific voice)
 voice_lines = voice.split('\n')
-part2_start = next(i for i, l in enumerate(voice_lines) if 'Part 2' in l)
-voice_part2 = '\n'.join(voice_lines[part2_start:])
+try:
+    part2_start = next(i for i, l in enumerate(voice_lines) if 'Part 2' in l)
+    voice_part2 = '\n'.join(voice_lines[part2_start:])
+except StopIteration:
+    voice_part2 = voice # Fallback if Part 2 not found
 
 prompt = f"""Build a complete world bible for this fantasy novel. This is the WORLD.MD file -- 
 the definitive reference for everything that EXISTS in this world. A writer should be able 
@@ -68,40 +71,42 @@ A timeline of major events. Focus on events that create PRESENT-DAY tensions.
 Include the founding myth, key turning points, and recent events that matter to the plot.
 
 ## Magic System
-### Hard Rules (Tonal Law)
-Specific, testable rules. What intervals do what. What progressions bind.
-What happens when you break the rules. Include COSTS and LIMITATIONS prominently.
+### Hard Rules
+Specific, testable rules. What is possible, what is impossible.
+Include COSTS and LIMITATIONS prominently. How do users access this power?
+What are the physical or spiritual consequences of use?
 
-### Soft Magic (Cass's Gift)
-What he perceives, how it works, what it costs HIM specifically.
-This should be mysterious but have consistent internal logic.
+### Soft Magic / Perceptions
+How do characters perceive the magic? What are the mysterious or unexplained 
+elements that remain beyond the reach of formal study?
 
 ### Societal Implications
-How does tonal law shape: governance, commerce, education, class structure,
-crime, family life, childhood, aging, disability?
+How does this magic/speculative element shape: governance, commerce, education, 
+class structure, crime, family life, childhood, aging, disability?
 
 ## Geography
-Cantamura's physical layout, districts, the natural amphitheater's acoustic properties.
-Neighboring places (at least 2-3). Sensory signatures for each location.
+The physical layout of the primary setting (city, region, etc). 
+Sensory signatures for major locations. How does the environment interact 
+with the magic or the central conflict?
 
 ## Factions & Politics
 Who holds power, who wants it, who's being crushed by it.
 At least 3-4 factions with opposing interests.
 
 ## Bestiary / Flora / Natural World
-What's unique about the natural world in and around Cantamura?
+What's unique about the natural world in this setting? 
+Include at least one unique creature or plant that has economic or magical importance.
 
 ## Cultural Details
 Customs, taboos, festivals, food, clothing, coming-of-age rituals.
-Things that make daily life feel SPECIFIC.
+Things that make daily life feel SPECIFIC to this world.
 
 ## Internal Consistency Rules
-Hard constraints a writer must not violate. The physics of sound in this world.
+Hard constraints a writer must not violate. The "physics" of this world.
 What's possible and what's not.
 
 IMPORTANT:
-- Be SPECIFIC. Not "the city has districts" but name them, describe them, 
-  give them sensory signatures.
+- Be SPECIFIC. Name things, describe them, give them sensory signatures.
 - Every rule should have a COST or LIMITATION stated alongside it.
 - Include 2-3 facts per section that are unexplained, hinting at deeper systems 
   (iceberg depth).
@@ -115,4 +120,5 @@ IMPORTANT:
 
 print("Calling writer model...", file=sys.stderr)
 result = call_writer(prompt)
+(BASE_DIR / "world.md").write_text(result)
 print(result)
