@@ -19,60 +19,29 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).parent
 load_dotenv(BASE_DIR / ".env")
 
+WRITER_MODEL = os.environ.get("AUTONOVEL_WRITER_MODEL", "claude-sonnet-4-6")
+
+from llm import call_llm
+
 JUDGE_MODEL = os.environ.get("AUTONOVEL_JUDGE_MODEL", "claude-opus-4-6")
-API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-API_BASE = os.environ.get("AUTONOVEL_API_BASE_URL", "https://api.anthropic.com")
-CHAPTERS_DIR = BASE_DIR / "chapters"
 
 def call_judge(prompt, max_tokens=4000):
-    import httpx
-    headers = {
-        "x-api-key": API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-    }
-    payload = {
-        "model": JUDGE_MODEL,
-        "max_tokens": max_tokens,
-        "temperature": 0.2,
-        "system": (
+    """Call the model via the central bridge."""
+    return call_llm(
+        prompt,
+        system_prompt=(
             "You are a literary editor comparing two chapters of the same novel. "
             "You pick the better one. You are not allowed to call it a tie. "
             "You quote specific passages to justify your choice. "
             "Respond with valid JSON only."
         ),
-        "messages": [{"role": "user", "content": prompt}],
-    }
-    resp = httpx.post(f"{API_BASE}/v1/messages", headers=headers, json=payload, timeout=300)
-    resp.raise_for_status()
-    return resp.json()["content"][0]["text"]
+        model=JUDGE_MODEL,
+        max_tokens=max_tokens,
+        temperature=0.2,
+        json_mode=True
+    )
 
-def parse_json(text):
-    text = text.strip()
-    if text.startswith("```"):
-        text = re.sub(r'^```\w*\n?', '', text)
-        text = re.sub(r'\n?```$', '', text)
-    start = text.find('{')
-    if start == -1:
-        raise ValueError("No JSON found")
-    try:
-        return json.loads(text[start:], strict=False)
-    except json.JSONDecodeError:
-        depth = 0
-        in_string = False
-        escape = False
-        for i in range(start, len(text)):
-            c = text[i]
-            if escape: escape = False; continue
-            if c == '\\' and in_string: escape = True; continue
-            if c == '"' and not escape: in_string = not in_string; continue
-            if in_string: continue
-            if c == '{': depth += 1
-            elif c == '}':
-                depth -= 1
-                if depth == 0:
-                    return json.loads(text[start:i+1], strict=False)
-        return json.loads(text[start:], strict=False)
+from llm import parse_json_response as parse_json
 
 COMPARE_PROMPT = """Compare these two chapters from the same fantasy novel.
 Both are first drafts. Pick the BETTER one. You MUST pick a winner -- no ties.

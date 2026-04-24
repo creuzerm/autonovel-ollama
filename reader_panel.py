@@ -18,8 +18,8 @@ BASE_DIR = Path(__file__).parent
 load_dotenv(BASE_DIR / ".env")
 
 JUDGE_MODEL = os.environ.get("AUTONOVEL_JUDGE_MODEL", "claude-opus-4-6")
-API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-API_BASE = os.environ.get("AUTONOVEL_API_BASE_URL", "https://api.anthropic.com")
+
+from llm import call_llm, parse_json_response
 
 READERS = {
     "editor": {
@@ -111,46 +111,19 @@ Respond with JSON:
 """
 
 def call_reader(reader_key, arc_summary):
-    import httpx
     reader = READERS[reader_key]
-    headers = {
-        "x-api-key": API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-    }
-    payload = {
-        "model": JUDGE_MODEL,
-        "max_tokens": 4000,
-        "temperature": 0.7,  # Higher temp for personality
-        "system": reader["system"],
-        "messages": [{"role": "user", "content": READER_PROMPT.format(arc_summary=arc_summary)}],
-    }
-    resp = httpx.post(f"{API_BASE}/v1/messages", headers=headers, json=payload, timeout=300)
-    resp.raise_for_status()
-    raw = resp.json()["content"][0]["text"]
+    prompt = READER_PROMPT.format(arc_summary=arc_summary)
     
-    # Parse JSON
-    raw = raw.strip()
-    if raw.startswith("```"):
-        raw = re.sub(r'^```\w*\n?', '', raw)
-        raw = re.sub(r'\n?```$', '', raw)
-    start = raw.find('{')
-    if start >= 0:
-        depth = 0
-        in_string = False
-        escape = False
-        for i in range(start, len(raw)):
-            c = raw[i]
-            if escape: escape = False; continue
-            if c == '\\' and in_string: escape = True; continue
-            if c == '"' and not escape: in_string = not in_string; continue
-            if in_string: continue
-            if c == '{': depth += 1
-            elif c == '}':
-                depth -= 1
-                if depth == 0:
-                    return json.loads(raw[start:i+1], strict=False)
-    return json.loads(raw, strict=False)
+    raw = call_llm(
+        prompt,
+        system_prompt=reader["system"],
+        model=JUDGE_MODEL,
+        max_tokens=4000,
+        temperature=0.7,
+        json_mode=True
+    )
+    
+    return parse_json_response(raw)
 
 def find_disagreements(results):
     """Find where readers disagree -- that's where the editorial decisions live."""
