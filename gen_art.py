@@ -119,7 +119,8 @@ def call_claude(prompt, max_tokens=1500):
         system_prompt="You are a book designer and art director specializing in high-end fantasy novels.",
         model=WRITER_MODEL,
         max_tokens=max_tokens,
-        temperature=0.3
+        temperature=0.3,
+        include_reasoning=False
     )
 
 

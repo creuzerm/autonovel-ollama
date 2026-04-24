@@ -284,7 +284,8 @@ def call_judge(prompt, max_tokens=2000):
         model=JUDGE_MODEL, 
         max_tokens=max_tokens, 
         temperature=0.3,
-        json_mode=True
+        json_mode=True,
+        include_reasoning=False
     )
 
 

@@ -120,7 +120,8 @@ def call_reader(reader_key, arc_summary):
         model=JUDGE_MODEL,
         max_tokens=4000,
         temperature=0.7,
-        json_mode=True
+        json_mode=True,
+        include_reasoning=False
     )
     
     return parse_json_response(raw)

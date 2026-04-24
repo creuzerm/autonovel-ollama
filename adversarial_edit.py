@@ -33,7 +33,8 @@ def call_judge(prompt, max_tokens=8000):
         system_prompt=system_prompt,
         model=JUDGE_MODEL,
         max_tokens=max_tokens,
-        temperature=0.3
+        temperature=0.3,
+        include_reasoning=False
     )
 
 EDIT_PROMPT = """You are editing a fantasy novel chapter. Your job: identify exactly

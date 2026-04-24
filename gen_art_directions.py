@@ -23,7 +23,8 @@ def call_claude(prompt, max_tokens=3000):
         system_prompt="You are an expert art director for a high-end publishing house.",
         model=WRITER_MODEL,
         max_tokens=max_tokens,
-        temperature=0.9
+        temperature=0.9,
+        include_reasoning=False
     )
 
 

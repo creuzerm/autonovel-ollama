@@ -24,7 +24,8 @@ def call_writer(prompt, max_tokens=4000):
         system_prompt="You summarize novel chapters precisely. State what HAPPENS, what CHANGES, and what QUESTIONS are left open. No evaluation. No praise. Just events and shifts.",
         model=WRITER_MODEL,
         max_tokens=max_tokens,
-        temperature=0.1
+        temperature=0.1,
+        include_reasoning=False
     )
 
 def extract_key_passages(text):
