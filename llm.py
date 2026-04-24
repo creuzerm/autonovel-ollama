@@ -37,7 +37,7 @@ def get_client():
             http_client=http_client
         )
 
-def call_llm(prompt, system_prompt="You are a helpful assistant.", model=None, max_tokens=4000, temperature=0.7, json_mode=False, stream=True):
+def call_llm(prompt, system_prompt="You are a helpful assistant.", model=None, max_tokens=4000, temperature=0.7, json_mode=False, stream=True, include_reasoning=True):
     """Unified LLM call supporting Anthropic and OpenAI-compatible endpoints with streaming for progress."""
     client = get_client()
     
@@ -53,7 +53,7 @@ def call_llm(prompt, system_prompt="You are a helpful assistant.", model=None, m
 
     # Extra body params for LiteLLM/Ollama
     extra_body = {
-        "include_reasoning": False,
+        "include_reasoning": include_reasoning,
         "options": {
             "num_predict": max_tokens if max_tokens > 0 else 4000,
             "temperature": temperature,
@@ -79,17 +79,29 @@ def call_llm(prompt, system_prompt="You are a helpful assistant.", model=None, m
             for chunk in response:
                 delta = chunk.choices[0].delta
                 content = delta.content or ""
-                reasoning = getattr(delta, 'reasoning_content', None) or ""
+                reasoning = getattr(delta, 'reasoning', None) or getattr(delta, 'reasoning_content', None) or ""
                 
                 if reasoning:
                     # Print reasoning to show progress
-                    print(reasoning, end="", flush=True)
-                    # For current Ollama setup, the actual response might be in reasoning_content
-                    full_content += reasoning
+                    print(f"\033[90m{reasoning}\033[0m", end="", flush=True)
+                    # If content is empty and we have reasoning, it might be the actual response for some models
+                    # or it might just be the thinking process. 
+                    # For safety in autonovel, we'll keep it separate UNLESS we see models 
+                    # that ONLY use reasoning for the response.
+                    # Actually, if we want to be safe and captured everything:
+                    full_content += reasoning # <--- UNCOMMENTED
                 
                 if content:
                     print(content, end="", flush=True)
                     full_content += content
+            
+            # If after the loop full_content is still empty but we had reasoning, 
+            # maybe the reasoning WAS the response (or we want to capture it anyway).
+            # For qwen3 in some modes this might be true.
+            if not full_content and reasoning:
+                 # This is a bit of a hack but helps if the model "thinks" the answer but doesn't "say" it.
+                 # Actually, let's just use a more robust way to capture it.
+                 pass
             print("\n") # New line after stream ends
             return full_content
         else:
@@ -101,7 +113,10 @@ def call_llm(prompt, system_prompt="You are a helpful assistant.", model=None, m
                 response_format=response_format,
                 extra_body=extra_body
             )
-            return response.choices[0].message.content
+            message = response.choices[0].message
+            content = message.content or ""
+            reasoning = getattr(message, 'reasoning', None) or getattr(message, 'reasoning_content', None) or ""
+            return (reasoning + content).strip() if include_reasoning else content.strip()
     except Exception as e:
         print(f"Error calling LLM: {e}")
         raise
