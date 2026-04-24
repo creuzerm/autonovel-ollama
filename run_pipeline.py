@@ -46,6 +46,12 @@ PLATEAU_DELTA = 0.3
 
 PHASE_ORDER = ["foundation", "drafting", "revision", "export"]
 
+# Force UTF-8 encoding on Windows to handle Unicode output
+if sys.platform == "win32":
+    import io
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
 
 # ---------------------------------------------------------------------------
 # Helpers: state management
@@ -132,7 +138,7 @@ def run_tool(cmd: str, timeout: int = 600, check: bool = False) -> subprocess.Co
     try:
         process = subprocess.Popen(
             cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            text=True, cwd=str(BASE_DIR), bufsize=1, universal_newlines=True
+            text=True, encoding='utf-8', cwd=str(BASE_DIR), bufsize=1, universal_newlines=True
         )
         
         import threading

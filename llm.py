@@ -2,9 +2,15 @@ import os
 import json
 import re
 import httpx
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
+
+# Force UTF-8 encoding on Windows to handle Unicode output from LLMs
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
 
 # Load .env file
 BASE_DIR = Path(__file__).parent
