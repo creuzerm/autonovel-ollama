@@ -1,6 +1,7 @@
 import os
 import json
 import re
+import httpx
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -14,43 +15,93 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 
 def get_client():
     """Returns an OpenAI client configured for LiteLLM or direct Anthropic."""
-    if LITELLM_BASE_URL:
+    base_url = os.environ.get("LITELLM_BASE_URL")
+    anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY")
+    openai_api_key = os.environ.get("OPENAI_API_KEY", "sk-dummy")
+
+    # Global timeout for the underlying httpx client (15 minutes)
+    http_client = httpx.Client(timeout=900.0)
+    
+    if base_url:
         # LiteLLM/Ollama path
         return OpenAI(
-            base_url=LITELLM_BASE_URL,
-            api_key=os.environ.get("OPENAI_API_KEY", "sk-dummy")
+            base_url=base_url,
+            api_key=openai_api_key,
+            http_client=http_client
         )
     else:
         # Fallback to direct Anthropic (requires LiteLLM locally or specific proxy)
         return OpenAI(
             base_url="https://api.anthropic.com/v1",
-            api_key=ANTHROPIC_API_KEY or "sk-dummy"
+            api_key=anthropic_api_key or "sk-dummy",
+            http_client=http_client
         )
 
-def call_llm(prompt, system_prompt="You are a helpful assistant.", model=None, max_tokens=4000, temperature=0.7, json_mode=False):
-    """Unified LLM call supporting Anthropic and OpenAI-compatible endpoints."""
+def call_llm(prompt, system_prompt="You are a helpful assistant.", model=None, max_tokens=4000, temperature=0.7, json_mode=False, stream=True):
+    """Unified LLM call supporting Anthropic and OpenAI-compatible endpoints with streaming for progress."""
     client = get_client()
     
     if not model:
         model = os.environ.get("AUTONOVEL_WRITER_MODEL", "claude-sonnet-4-6")
+
+    print(f"Calling LLM ({model})...", flush=True)
 
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": prompt}
     ]
 
+    # Extra body params for LiteLLM/Ollama
+    extra_body = {
+        "include_reasoning": False,
+        "options": {
+            "num_predict": max_tokens if max_tokens > 0 else 4000,
+            "temperature": temperature,
+            "num_ctx": 262144 # Match the context window seen in ollama ps
+        }
+    }
+    
     response_format = {"type": "json_object"} if json_mode else None
 
     try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            response_format=response_format,
-            extra_body={}
-        )
-        return response.choices[0].message.content
+        if stream:
+            full_content = ""
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                response_format=response_format,
+                extra_body=extra_body,
+                stream=True
+            )
+            print("Response: ", end="", flush=True)
+            for chunk in response:
+                delta = chunk.choices[0].delta
+                content = delta.content or ""
+                reasoning = getattr(delta, 'reasoning_content', None) or ""
+                
+                if reasoning:
+                    # Print reasoning to show progress
+                    print(reasoning, end="", flush=True)
+                    # For current Ollama setup, the actual response might be in reasoning_content
+                    full_content += reasoning
+                
+                if content:
+                    print(content, end="", flush=True)
+                    full_content += content
+            print("\n") # New line after stream ends
+            return full_content
+        else:
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                response_format=response_format,
+                extra_body=extra_body
+            )
+            return response.choices[0].message.content
     except Exception as e:
         print(f"Error calling LLM: {e}")
         raise
