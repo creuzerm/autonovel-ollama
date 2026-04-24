@@ -75,9 +75,16 @@ def default_state() -> dict:
 
 
 def save_state(state: dict):
-    """Write state to state.json."""
-    with open(STATE_FILE, "w") as f:
-        json.dump(state, f, indent=2)
+    """Write state to state.json atomically."""
+    temp_file = STATE_FILE.with_suffix(".tmp")
+    try:
+        with open(temp_file, "w") as f:
+            json.dump(state, f, indent=2)
+        os.replace(str(temp_file), str(STATE_FILE))
+    except Exception as e:
+        print(f"    WARN: Failed to save state atomically: {e}")
+        with open(STATE_FILE, "w") as f:
+            json.dump(state, f, indent=2)
 
 
 # ---------------------------------------------------------------------------
@@ -115,30 +122,60 @@ def step(text: str):
 
 def run_tool(cmd: str, timeout: int = 600, check: bool = False) -> subprocess.CompletedProcess:
     """
-    Run a tool as a subprocess, capturing output.
-    Uses shell=True so callers can pass full command strings.
+    Run a tool as a subprocess, streaming output to the console.
     Returns CompletedProcess; never raises unless check=True.
     """
     step(f"RUN: {cmd}")
+    stdout_chunks = []
+    stderr_chunks = []
+    
     try:
-        result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True,
-            timeout=timeout, cwd=str(BASE_DIR),
+        process = subprocess.Popen(
+            cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=True, cwd=str(BASE_DIR), bufsize=1, universal_newlines=True
         )
+        
+        import threading
+
+        def stream_output(pipe, chunks, prefix=""):
+            for line in pipe:
+                print(line, end="", flush=True)
+                chunks.append(line)
+
+        t_out = threading.Thread(target=stream_output, args=(process.stdout, stdout_chunks))
+        t_err = threading.Thread(target=stream_output, args=(process.stderr, stderr_chunks, "ERR: "))
+        
+        t_out.start()
+        t_err.start()
+        
+        try:
+            process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            t_out.join()
+            t_err.join()
+            print(f"    ERROR: timed out after {timeout}s")
+            return subprocess.CompletedProcess(cmd, returncode=-1, stdout="".join(stdout_chunks), stderr="TIMEOUT")
+        
+        t_out.join()
+        t_err.join()
+        
+        result = subprocess.CompletedProcess(
+            cmd, returncode=process.returncode, 
+            stdout="".join(stdout_chunks), stderr="".join(stderr_chunks)
+        )
+
         if result.returncode != 0:
             print(f"    WARN: exit code {result.returncode}")
-            stderr_preview = (result.stderr or "")[:300]
-            if stderr_preview:
-                print(f"    stderr: {stderr_preview}")
+        
         if check and result.returncode != 0:
             raise subprocess.CalledProcessError(
                 result.returncode, cmd, result.stdout, result.stderr)
         return result
-    except subprocess.TimeoutExpired:
-        print(f"    ERROR: timed out after {timeout}s")
-        # Return a fake CompletedProcess for graceful handling
-        fake = subprocess.CompletedProcess(cmd, returncode=-1, stdout="", stderr="TIMEOUT")
-        return fake
+        
+    except Exception as e:
+        if check: raise
+        return subprocess.CompletedProcess(cmd, returncode=-1, stdout="".join(stdout_chunks), stderr=str(e))
 
 
 def uv_run(script: str, timeout: int = 600) -> subprocess.CompletedProcess:
@@ -248,31 +285,45 @@ def run_foundation(state: dict) -> dict:
     for i in range(iteration + 1, MAX_FOUNDATION_ITERS + 1):
         banner(f"Foundation Iteration {i}", "-")
         state["iteration"] = i
+        save_state(state)
+
+        def run_step(name, script, target_file, threshold=500, timeout=1200):
+            target = BASE_DIR / target_file
+            if target.exists() and target.stat().st_size > threshold:
+                step(f"Skipping {name} (already exists: {target_file})")
+                return True
+            
+            step(f"Generating {name}...")
+            res = uv_run(script, timeout=timeout)
+            if res.returncode != 0:
+                step(f"ERROR: Failed to generate {name}. Stopping.")
+                return False
+            return True
 
         # 1. Generate planning documents
-        step("Generating world bible...")
-        uv_run("gen_world.py", timeout=300)
+        if not run_step("world bible", "gen_world.py", "world.md"): return state
+        if not run_step("characters", "gen_characters.py", "characters.md"): return state
+        if not run_step("mystery", "gen_mystery.py", "MYSTERY.md"): return state
+        if not run_step("voice", "gen_voice.py", "voice.md"): return state
+        
+        # Outline part 1
+        if not run_step("outline (part 1)", "gen_outline.py", "outline.md", threshold=1000): 
+            return state
 
-        step("Generating characters...")
-        uv_run("gen_characters.py", timeout=300)
-
-        step("Generating mystery...")
-        uv_run("gen_mystery.py", timeout=300)
-
-        step("Generating voice...")
-        uv_run("gen_voice.py", timeout=300)
-
-        step("Generating outline (part 1)...")
-        uv_run("gen_outline.py", timeout=300)
-
+        # Outline part 2 (it has its own resume logic, so just run it)
         step("Generating outline (part 2 — foreshadowing)...")
-        uv_run("gen_outline_part2.py", timeout=300)
+        res = uv_run("gen_outline_part2.py", timeout=1200)
+        if res.returncode != 0:
+            step("ERROR: Failed to generate outline part 2. Stopping.")
+            return state
 
-        step("Generating canon...")
-        uv_run("gen_canon.py", timeout=300)
+        if not run_step("canon", "gen_canon.py", "canon.md"): return state
 
         step("Running voice fingerprint...")
-        uv_run("voice_fingerprint.py", timeout=300)
+        res = uv_run("voice_fingerprint.py", timeout=600)
+        if res.returncode != 0:
+            step("ERROR: Failed to run voice fingerprint. Stopping.")
+            return state
 
         # 2. Evaluate
         step("Evaluating foundation...")
