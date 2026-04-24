@@ -9,24 +9,22 @@ from openai import OpenAI
 BASE_DIR = Path(__file__).parent
 load_dotenv(BASE_DIR / ".env")
 
+LITELLM_BASE_URL = os.environ.get("LITELLM_BASE_URL")
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
+
 def get_client():
     """Returns an OpenAI client configured for LiteLLM or direct Anthropic."""
-    base_url = os.environ.get("LITELLM_BASE_URL")
-    
-    if base_url:
+    if LITELLM_BASE_URL:
         # LiteLLM/Ollama path
         return OpenAI(
-            base_url=base_url,
+            base_url=LITELLM_BASE_URL,
             api_key=os.environ.get("OPENAI_API_KEY", "sk-dummy")
         )
     else:
         # Fallback to direct Anthropic (requires LiteLLM locally or specific proxy)
-        # Note: If no LITELLM_BASE_URL, we default to Anthropic's URL.
-        # Anthropic doesn't support the OpenAI SDK natively without a proxy,
-        # so this assumes the user is using one or provided a LITELLM_BASE_URL.
         return OpenAI(
             base_url="https://api.anthropic.com/v1",
-            api_key=os.environ.get("ANTHROPIC_API_KEY", "sk-dummy")
+            api_key=ANTHROPIC_API_KEY or "sk-dummy"
         )
 
 def call_llm(prompt, system_prompt="You are a helpful assistant.", model=None, max_tokens=4000, temperature=0.7, json_mode=False):
