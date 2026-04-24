@@ -27,12 +27,29 @@ def call_writer(prompt, max_tokens=16000):
         temperature=0.5
     )
 
-part1 = open('/tmp/outline_output.md').read()
+outline_path = BASE_DIR / "outline.md"
+if not outline_path.exists():
+    print("ERROR: outline.md not found. Run gen_outline.py first.", file=sys.stderr)
+    sys.exit(1)
+
+part1 = outline_path.read_text()
 mystery = (BASE_DIR / "MYSTERY.md").read_text()
 
-prompt = f"""Here are the first 17 chapters of a 24-chapter outline for "The Second Son of the House of Bells."
-The outline was cut off mid-chapter-17. Continue from where it left off, then complete chapters 18-24,
-then write the Foreshadowing Ledger.
+# Determine where we left off
+import re
+matches = re.findall(r'###\s*Ch(?:apter)?\s*(\d+)', part1)
+if matches:
+    last_ch = int(matches[-1])
+else:
+    last_ch = 0
+
+if last_ch >= 24:
+    print(f"Outline already seems complete (up to Ch {last_ch}). Skipping part 2.")
+    sys.exit(0)
+
+prompt = f"""Continue the chapter outline for this novel. 
+The outline currently ends at Chapter {last_ch}. 
+Complete the remaining chapters to reach a total of 24, then write the Foreshadowing Ledger.
 
 THE OUTLINE SO FAR:
 {part1}
@@ -41,14 +58,8 @@ THE CENTRAL MYSTERY (for reference):
 {mystery}
 
 REMAINING STRUCTURE NEEDED:
-
-Ch 17 (complete it): Maret confrontation -- she reveals the truth about the void
-Ch 18: Dark Night of the Soul -- Cass processes what he's learned
-Ch 19: Break Into Three -- new information or perspective changes everything  
-Ch 20-21: Gathering forces, making a plan
-Ch 22: The climax at the Bell Tower -- Cass answers the question
-Ch 23: Aftermath and resolution
-Ch 24: Final Image (mirror of Opening Image)
+Complete chapters {last_ch+1} through 24 following the Act III and climax requirements 
+implied by the seed and the preceding chapters.
 
 Then write:
 
@@ -61,14 +72,17 @@ Include at LEAST 15 threads. Types: object, dialogue, action, symbolic, structur
 Plant-to-payoff distance must be at least 3 chapters.
 
 REMEMBER:
-- The climax uses the fourth option: Cass amplifies the question into audible range
-  so the city can hear and answer for themselves
-- This doesn't free Perin directly (Stability Trap -- not everything resolves cleanly)
-- Cass's lie must be fully shattered by the climax
-- Final Image should mirror Ch 1's Opening Image but show transformation
-- At least one quiet chapter in the back half
+- The climax must be mechanically resolvable using established world rules and magic costs.
+- The Stability Trap: allow for genuine change and irreversible loss.
+- At least one quiet chapter in the back half.
+- Final Image should mirror Chapter 1's Opening Image but show transformation.
 """
 
-print("Calling writer model...", file=sys.stderr)
+print(f"Calling writer model to continue from Chapter {last_ch}...", file=sys.stderr)
 result = call_writer(prompt)
+
+# Append to outline.md
+with open(outline_path, "a") as f:
+    f.write("\n\n" + result)
+
 print(result)

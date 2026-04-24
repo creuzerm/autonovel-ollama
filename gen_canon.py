@@ -57,8 +57,8 @@ FORMAT THE OUTPUT AS CANON.MD with these categories:
 - Dated events, ages, durations
 
 ## Magic System Rules
-- Hard rules of Tonal Law (intervals, costs, limitations)
-- Cass's gift specifics
+- Hard rules (limitations, costs, mechanics)
+- Character-specific abilities or perceptions
 
 ## Character Facts
 - Ages, physical descriptions, habits, relationships
@@ -72,7 +72,6 @@ FORMAT THE OUTPUT AS CANON.MD with these categories:
 
 ## Established In-Story
 - Events that have already happened in the story's past
-- The Perin contract, the Expansion Wars, etc.
 
 RULES:
 - One fact per bullet point. Short. Specific. Checkable.
@@ -84,4 +83,5 @@ RULES:
 
 print("Calling writer model...", file=sys.stderr)
 result = call_writer(prompt)
+(BASE_DIR / "canon.md").write_text(result)
 print(result)

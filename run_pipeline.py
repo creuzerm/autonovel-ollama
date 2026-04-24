@@ -256,6 +256,12 @@ def run_foundation(state: dict) -> dict:
         step("Generating characters...")
         uv_run("gen_characters.py", timeout=300)
 
+        step("Generating mystery...")
+        uv_run("gen_mystery.py", timeout=300)
+
+        step("Generating voice...")
+        uv_run("gen_voice.py", timeout=300)
+
         step("Generating outline (part 1)...")
         uv_run("gen_outline.py", timeout=300)
 
