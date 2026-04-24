@@ -84,12 +84,9 @@ def call_llm(prompt, system_prompt="You are a helpful assistant.", model=None, m
                 if reasoning:
                     # Print reasoning to show progress
                     print(f"\033[90m{reasoning}\033[0m", end="", flush=True)
-                    # If content is empty and we have reasoning, it might be the actual response for some models
-                    # or it might just be the thinking process. 
-                    # For safety in autonovel, we'll keep it separate UNLESS we see models 
-                    # that ONLY use reasoning for the response.
-                    # Actually, if we want to be safe and captured everything:
-                    full_content += reasoning # <--- UNCOMMENTED
+                    
+                    if include_reasoning:
+                        full_content += reasoning
                 
                 if content:
                     print(content, end="", flush=True)

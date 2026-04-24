@@ -26,7 +26,8 @@ def call_writer(prompt, max_tokens=4000):
         system_prompt=system_prompt,
         model=WRITER_MODEL,
         max_tokens=max_tokens,
-        temperature=0.7
+        temperature=0.8,
+        include_reasoning=False
     )
 
 seed = (BASE_DIR / "seed.txt").read_text()

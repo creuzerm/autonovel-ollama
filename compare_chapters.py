@@ -38,7 +38,8 @@ def call_judge(prompt, max_tokens=4000):
         model=JUDGE_MODEL,
         max_tokens=max_tokens,
         temperature=0.2,
-        json_mode=True
+        json_mode=True,
+        include_reasoning=False
     )
 
 from llm import parse_json_response as parse_json

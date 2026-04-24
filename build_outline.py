@@ -34,7 +34,8 @@ def call_model(prompt, max_tokens=1500):
         model=JUDGE_MODEL,
         max_tokens=max_tokens,
         temperature=0.1,
-        json_mode=True
+        json_mode=True,
+        include_reasoning=False
     )
 
 def main():

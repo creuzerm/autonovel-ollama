@@ -39,7 +39,8 @@ def call_opus(prompt, max_tokens=8000):
         system_prompt="You are a literary critic and professor of fiction reviewing a full manuscript.",
         model=REVIEW_MODEL,
         max_tokens=max_tokens,
-        temperature=0.3
+        temperature=0.3,
+        include_reasoning=False
     )
 
 

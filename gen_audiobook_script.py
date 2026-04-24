@@ -72,7 +72,8 @@ def call_claude(prompt, max_tokens=8000):
         system_prompt="You are an expert audio scriptwriter converting prose into speech-attributed segments.",
         model=WRITER_MODEL,
         max_tokens=max_tokens,
-        temperature=0.1
+        temperature=0.1,
+        include_reasoning=False
     )
 
 

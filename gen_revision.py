@@ -27,7 +27,8 @@ def call_writer(prompt, max_tokens=16000):
         system_prompt=system_prompt,
         model=WRITER_MODEL,
         max_tokens=max_tokens,
-        temperature=0.8
+        temperature=0.8,
+        include_reasoning=False
     )
 
 def main():
