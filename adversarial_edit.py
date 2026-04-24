@@ -18,7 +18,7 @@ load_dotenv(BASE_DIR / ".env")
 
 JUDGE_MODEL = os.environ.get("AUTONOVEL_JUDGE_MODEL", "claude-opus-4-6")
 
-from llm import call_llm
+from llm import call_llm, parse_json_response as parse_json
 
 def call_judge(prompt, max_tokens=8000):
     """Call the model via the central bridge."""
@@ -35,48 +35,6 @@ def call_judge(prompt, max_tokens=8000):
         max_tokens=max_tokens,
         temperature=0.3
     )
-
-
-def parse_json(text):
-    text = text.strip()
-    if text.startswith("```"):
-        text = re.sub(r'^```\w*\n?', '', text)
-        text = re.sub(r'\n?```$', '', text)
-    start = text.find('{')
-    if start == -1:
-        start = text.find('[')
-    if start == -1:
-        raise ValueError("No JSON found")
-    # Try direct parse first
-    try:
-        return json.loads(text[start:], strict=False)
-    except json.JSONDecodeError:
-        # Find matching brace
-        depth = 0
-        in_string = False
-        escape = False
-        open_char = text[start]
-        close_char = '}' if open_char == '{' else ']'
-        for i in range(start, len(text)):
-            c = text[i]
-            if escape:
-                escape = False
-                continue
-            if c == '\\' and in_string:
-                escape = True
-                continue
-            if c == '"' and not escape:
-                in_string = not in_string
-                continue
-            if in_string:
-                continue
-            if c == open_char:
-                depth += 1
-            elif c == close_char:
-                depth -= 1
-                if depth == 0:
-                    return json.loads(text[start:i+1], strict=False)
-        return json.loads(text[start:], strict=False)
 
 EDIT_PROMPT = """You are editing a fantasy novel chapter. Your job: identify exactly
 what to cut or rewrite to make this chapter tighter, sharper, more alive.
