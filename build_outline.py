@@ -11,14 +11,12 @@ import re
 from pathlib import Path
 from dotenv import load_dotenv
 
-BASE_DIR = Path(__file__).parent
+from paths import BASE_DIR, CHAPTERS_DIR, CHARACTERS_PATH, OUTLINE_PATH
 load_dotenv(BASE_DIR / ".env")
 
 WRITER_MODEL = os.environ.get("AUTONOVEL_WRITER_MODEL", "claude-sonnet-4-6")
 
 from llm import call_llm
-
-CHAPTERS_DIR = BASE_DIR / "chapters"
 
 JUDGE_MODEL = os.environ.get("AUTONOVEL_JUDGE_MODEL", "claude-opus-4-6")
 
@@ -40,13 +38,15 @@ def call_model(prompt, max_tokens=1500):
 
 def main():
     # Load supporting docs for context
-    characters = (BASE_DIR / "characters.md").read_text()[:3000]
+    characters = CHARACTERS_PATH.read_text(encoding='utf-8')[:3000]
     
     entries = []
     
     for ch in range(1, 20):
         path = CHAPTERS_DIR / f"ch_{ch:02d}.md"
-        text = path.read_text()
+        if not path.exists():
+            continue
+        text = path.read_text(encoding='utf-8')
         wc = len(text.split())
         
         title_line = text.strip().split('\n')[0].lstrip('# ').strip()
@@ -78,14 +78,14 @@ JSON only, no other text."""
         print(f"  {ch:2d}. {title_line} ({wc}w)")
     
     # Load existing outline header info
-    old_outline = (BASE_DIR / "outline.md").read_text()
+    old_outline = OUTLINE_PATH.read_text(encoding='utf-8') if OUTLINE_PATH.exists() else ""
     
     # Build new outline
     lines = []
     lines.append("# THE SECOND SON OF THE HOUSE OF BELLS")
     lines.append("## Chapter Outline (reflects actual novel as-written)")
     lines.append("")
-    lines.append(f"**23 chapters, {sum(e['words'] for e in entries):,} words**")
+    lines.append(f"**{len(entries)} chapters, {sum(e['words'] for e in entries):,} words**")
     lines.append("")
     lines.append("---")
     lines.append("")
@@ -149,10 +149,10 @@ JSON only, no other text."""
     lines.append("")
     lines.append("---")
     lines.append("")
-    lines.append("*Outline rebuilt from actual chapters, Cycle 5.*")
+    lines.append("*Outline rebuilt from actual chapters.*")
     
     out = '\n'.join(lines)
-    (BASE_DIR / "outline.md").write_text(out)
+    OUTLINE_PATH.write_text(out, encoding='utf-8')
     print(f"\nSaved outline.md ({len(out.split())} words)")
 
 if __name__ == "__main__":

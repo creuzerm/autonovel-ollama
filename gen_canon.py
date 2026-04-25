@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
-BASE_DIR = Path(__file__).parent
+from paths import BASE_DIR, WORLD_PATH, CHARACTERS_PATH, SEED_PATH, CANON_PATH
 load_dotenv(BASE_DIR / ".env")
 
 WRITER_MODEL = os.environ.get("AUTONOVEL_WRITER_MODEL", "claude-sonnet-4-6")
@@ -30,9 +30,9 @@ def call_writer(prompt, max_tokens=16000):
         include_reasoning=False
     )
 
-world = (BASE_DIR / "world.md").read_text()
-characters = (BASE_DIR / "characters.md").read_text()
-seed = (BASE_DIR / "seed.txt").read_text()
+world = WORLD_PATH.read_text(encoding='utf-8')
+characters = CHARACTERS_PATH.read_text(encoding='utf-8')
+seed = SEED_PATH.read_text(encoding='utf-8')
 
 prompt = f"""Extract EVERY hard fact from these planning documents into a structured canon database.
 A "hard fact" is anything a writer must not contradict: names, ages, dates, physical descriptions,
@@ -84,5 +84,6 @@ RULES:
 
 print("Calling writer model...", file=sys.stderr)
 result = call_writer(prompt)
-(BASE_DIR / "canon.md").write_text(result)
+CANON_PATH.write_text(result, encoding='utf-8')
+print(result)
 print(result)

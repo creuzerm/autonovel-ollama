@@ -47,7 +47,7 @@ def main():
     
     for ch in range(1, 20):
         path = CHAPTERS_DIR / f"ch_{ch:02d}.md"
-        text = path.read_text()
+        text = path.read_text(encoding='utf-8')
         wc = len(text.split())
         opening, closing, dialogue = extract_key_passages(text)
         
@@ -73,7 +73,7 @@ def main():
         print(f"Ch {ch}: summarized ({wc}w)")
     
     # Calculate total word count
-    total_wc = sum(len((CHAPTERS_DIR / f"ch_{c:02d}.md").read_text().split()) for c in range(1, 20))
+    total_wc = sum(len((CHAPTERS_DIR / f"ch_{c:02d}.md").read_text(encoding='utf-8').split()) for c in range(1, 20))
     
     # Assemble
     full = f"""# THE SECOND SON OF THE HOUSE OF BELLS
@@ -98,7 +98,7 @@ ever answered. Every binding in Cantamura is technically void.
     full += '\n---\n\n'.join(summaries)
     
     out_path = BASE_DIR / "arc_summary.md"
-    out_path.write_text(full)
+    out_path.write_text(full, encoding='utf-8')
     print(f"\nSaved to {out_path} ({len(full.split())} words)")
 
 if __name__ == "__main__":

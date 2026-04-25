@@ -15,17 +15,8 @@ import re
 import sys
 from pathlib import Path
 
-BASE_DIR = Path(__file__).parent
-CHAPTERS_DIR = BASE_DIR / "chapters"
-EDIT_LOGS_DIR = BASE_DIR / "edit_logs"
-EVAL_LOGS_DIR = BASE_DIR / "eval_logs"
-BRIEFS_DIR = BASE_DIR / "briefs"
-VOICE_PATH = BASE_DIR / "voice.md"
+from paths import BASE_DIR, CHAPTERS_DIR, EDIT_LOGS_DIR, EVAL_LOGS_DIR, BRIEFS_DIR, VOICE_PATH
 
-
-# ---------------------------------------------------------------------------
-# helpers
-# ---------------------------------------------------------------------------
 
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))

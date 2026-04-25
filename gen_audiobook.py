@@ -47,7 +47,7 @@ def load_voices():
     if not VOICES_FILE.exists():
         print(f"ERROR: {VOICES_FILE} not found. Create it first.", file=sys.stderr)
         sys.exit(1)
-    data = json.loads(VOICES_FILE.read_text())
+    data = json.loads(VOICES_FILE.read_text(encoding='utf-8'))
     voices = {}
     for name, info in data.items():
         if name.startswith("_"):
@@ -64,7 +64,7 @@ def load_script(ch_num):
     if not path.exists():
         print(f"  Script not found: {path}. Run gen_audiobook_script.py first.", file=sys.stderr)
         return None
-    return json.loads(path.read_text())
+    return json.loads(path.read_text(encoding='utf-8'))
 
 
 def chunk_segments(segments, voices, max_chars=MAX_CHARS_PER_CALL):

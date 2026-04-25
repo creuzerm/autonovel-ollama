@@ -124,8 +124,8 @@ def main():
     result = call_writer(prompt, max_tokens=8000)
     print(result)
     print("\n" + "=" * 60)
-    print("To pick a seed, copy the concept you like into seed.txt:")
-    print("  nano seed.txt")
+    print("To pick a seed, copy the concept you like into lore/seed.txt:")
+    print("  nano lore/seed.txt")
     print("Or remix several concepts into your own seed.")
     print("Then proceed to Step 2 in WORKFLOW.md.")
 

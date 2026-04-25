@@ -13,12 +13,14 @@ import re
 from pathlib import Path
 from dotenv import load_dotenv
 
-BASE_DIR = Path(__file__).parent
+from paths import BASE_DIR, CHAPTERS_DIR, EDIT_LOGS_DIR
 load_dotenv(BASE_DIR / ".env")
 
 JUDGE_MODEL = os.environ.get("AUTONOVEL_JUDGE_MODEL", "claude-opus-4-6")
 
 from llm import call_llm, parse_json_response as parse_json
+
+EDIT_LOG_DIR = EDIT_LOGS_DIR
 
 def call_judge(prompt, max_tokens=8000):
     """Call the model via the central bridge."""
@@ -82,7 +84,7 @@ Respond with JSON:
 
 def edit_chapter(ch_num):
     ch_path = CHAPTERS_DIR / f"ch_{ch_num:02d}.md"
-    text = ch_path.read_text()
+    text = ch_path.read_text(encoding='utf-8')
     word_count = len(text.split())
     
     prompt = EDIT_PROMPT.format(chapter_text=text, word_count=word_count)

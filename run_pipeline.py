@@ -29,8 +29,10 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 BASE_DIR = Path(__file__).parent
-STATE_FILE = BASE_DIR / "state.json"
-RESULTS_FILE = BASE_DIR / "results.tsv"
+PROMPTS_DIR = BASE_DIR / "prompts"
+LORE_DIR = BASE_DIR / "lore"
+STATE_FILE = LORE_DIR / "state.json"
+RESULTS_FILE = LORE_DIR / "results.tsv"
 CHAPTERS_DIR = BASE_DIR / "chapters"
 BRIEFS_DIR = BASE_DIR / "briefs"
 EDIT_LOGS_DIR = BASE_DIR / "edit_logs"
@@ -102,10 +104,10 @@ def log_result(commit: str, phase: str, score, word_count: int,
     """Append a row to results.tsv."""
     header = "commit\tphase\tscore\tword_count\tstatus\tdescription\n"
     if not RESULTS_FILE.exists():
-        RESULTS_FILE.write_text(header)
+        RESULTS_FILE.write_text(header, encoding='utf-8')
     elif RESULTS_FILE.stat().st_size == 0:
-        RESULTS_FILE.write_text(header)
-    with open(RESULTS_FILE, "a") as f:
+        RESULTS_FILE.write_text(header, encoding='utf-8')
+    with open(RESULTS_FILE, "a", encoding='utf-8') as f:
         f.write(f"{commit}\t{phase}\t{score}\t{word_count}\t{status}\t{description}\n")
 
 
@@ -249,7 +251,7 @@ def count_words_in_chapters() -> int:
     total = 0
     if CHAPTERS_DIR.exists():
         for f in CHAPTERS_DIR.glob("ch_*.md"):
-            total += len(f.read_text().split())
+            total += len(f.read_text(encoding='utf-8').split())
     return total
 
 
@@ -265,9 +267,9 @@ def get_total_chapters(state: dict) -> int:
     if state.get("chapters_total", 0) > 0:
         return state["chapters_total"]
     # Try to infer from outline.md
-    outline = BASE_DIR / "outline.md"
+    outline = LORE_DIR / "outline.md"
     if outline.exists():
-        text = outline.read_text()
+        text = outline.read_text(encoding='utf-8')
         matches = re.findall(r'###\s*Ch(?:apter)?\s*(\d+)', text)
         if matches:
             return max(int(m) for m in matches)
@@ -294,7 +296,7 @@ def run_foundation(state: dict) -> dict:
         save_state(state)
 
         def run_step(name, script, target_file, threshold=500, timeout=1200):
-            target = BASE_DIR / target_file
+            target = LORE_DIR / target_file
             if target.exists() and target.stat().st_size > threshold:
                 step(f"Skipping {name} (already exists: {target_file})")
                 return True
@@ -408,7 +410,7 @@ def run_drafting(state: dict) -> dict:
                 step("Chapter file missing or too short, retrying...")
                 continue
 
-            word_count = len(ch_file.read_text().split())
+            word_count = len(ch_file.read_text(encoding='utf-8').split())
             step(f"Drafted {word_count} words")
 
             # Evaluate
@@ -439,7 +441,7 @@ def run_drafting(state: dict) -> dict:
             # Keep whatever we have and commit it
             ch_file = CHAPTERS_DIR / f"ch_{ch:02d}.md"
             if ch_file.exists():
-                word_count = len(ch_file.read_text().split())
+                word_count = len(ch_file.read_text(encoding='utf-8').split())
                 commit_hash = git_add_commit(
                     f"ch{ch:02d}: best-effort after {MAX_CHAPTER_ATTEMPTS} attempts")
                 log_result(commit_hash, f"ch{ch:02d}", "?", word_count,
@@ -604,7 +606,7 @@ def run_revision(state: dict, max_cycles: int = MAX_REVISION_CYCLES) -> dict:
                     f"Focus: address the {question.replace('_', ' ')} issue.\n"
                     f"Preserve existing voice, character work, and essential beats.\n"
                 )
-                brief_file.write_text(brief_content)
+                brief_file.write_text(brief_content, encoding='utf-8')
 
             if not brief_file.exists():
                 step(f"No brief file found for Ch {ch_num}, skipping")
@@ -619,7 +621,7 @@ def run_revision(state: dict, max_cycles: int = MAX_REVISION_CYCLES) -> dict:
             post_score = parse_score(post_eval.stdout, "overall_score")
 
             ch_file = CHAPTERS_DIR / f"ch_{ch_num:02d}.md"
-            word_count = len(ch_file.read_text().split()) if ch_file.exists() else 0
+            word_count = len(ch_file.read_text(encoding='utf-8').split()) if ch_file.exists() else 0
 
             step(f"Ch {ch_num}: {pre_score} -> {post_score}")
 
@@ -695,7 +697,7 @@ def run_revision(state: dict, max_cycles: int = MAX_REVISION_CYCLES) -> dict:
                 (EDIT_LOGS_DIR).glob("*_review.json"), reverse=True)
             if review_logs:
 
-                review_data = json.loads(review_logs[0].read_text())
+                review_data = json.loads(review_logs[0].read_text(encoding='utf-8'))
                 stars = review_data.get("stars", 0) or 0
                 total_items = review_data.get("total_items", 0)
                 major_items = review_data.get("major_items", 0)
@@ -786,12 +788,12 @@ def run_export(state: dict) -> dict:
 
     parts = []
     for ch_file in chapter_files:
-        text = ch_file.read_text().strip()
+        text = ch_file.read_text(encoding='utf-8').strip()
         if text:
             parts.append(text)
 
     if parts:
-        manuscript.write_text("\n\n---\n\n".join(parts) + "\n")
+        manuscript.write_text("\n\n---\n\n".join(parts) + "\n", encoding='utf-8')
         word_count = sum(len(p.split()) for p in parts)
         step(f"Manuscript: {len(parts)} chapters, {word_count} words")
     else:
@@ -843,7 +845,7 @@ def run_pipeline(args):
     # Load or initialize state
     if args.from_scratch:
         banner("STARTING FROM SCRATCH")
-        seed_file = BASE_DIR / "seed.txt"
+        seed_file = LORE_DIR / "seed.txt"
         if not seed_file.exists():
             print("ERROR: seed.txt not found. Cannot start from scratch without a seed.")
             sys.exit(1)
@@ -853,6 +855,7 @@ def run_pipeline(args):
         state = load_state()
 
     # Ensure directories exist
+    LORE_DIR.mkdir(exist_ok=True)
     CHAPTERS_DIR.mkdir(exist_ok=True)
     BRIEFS_DIR.mkdir(exist_ok=True)
     EDIT_LOGS_DIR.mkdir(exist_ok=True)
@@ -888,6 +891,7 @@ def run_pipeline(args):
 
     for phase in phases:
         try:
+            current_phase_in_state = state.get("phase")
             if phase == "foundation":
                 state = run_foundation(state)
             elif phase == "drafting":
@@ -899,6 +903,12 @@ def run_pipeline(args):
             else:
                 print(f"Unknown phase: {phase}")
                 sys.exit(1)
+            
+            # If we are running multiple phases and the state phase hasn't advanced, stop.
+            if not args.phase and state.get("phase") == current_phase_in_state:
+                print(f"\n  ERROR: Phase '{phase}' did not complete successfully. Stopping pipeline.")
+                sys.exit(1)
+                
         except KeyboardInterrupt:
             banner("INTERRUPTED — state saved")
             save_state(state)

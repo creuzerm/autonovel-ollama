@@ -11,8 +11,7 @@ import statistics
 from pathlib import Path
 from collections import Counter
 
-BASE_DIR = Path(__file__).parent
-CHAPTERS_DIR = BASE_DIR / "chapters"
+from paths import BASE_DIR, CHAPTERS_DIR, EDIT_LOGS_DIR
 
 # The three vocabulary wells from voice.md
 WELL_MUSICAL = {
@@ -58,7 +57,7 @@ ABSTRACT_INDICATORS = {
 }
 
 def analyze_chapter(path):
-    text = path.read_text()
+    text = path.read_text(encoding='utf-8')
     words = text.split()
     word_count = len(words)
     lower_words = [w.lower().strip(".,;:!?\"'()—-–") for w in words]
@@ -192,8 +191,8 @@ def main():
             print(f"    {o}")
     
     # Save full results
-    out_path = BASE_DIR / "edit_logs" / "voice_fingerprint.json"
-    with open(out_path, "w") as f:
+    out_path = EDIT_LOGS_DIR / "voice_fingerprint.json"
+    with open(out_path, "w", encoding='utf-8') as f:
         json.dump({"chapters": results, "outliers": outliers}, f, indent=2)
     print(f"\nSaved to {out_path}")
 

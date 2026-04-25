@@ -9,11 +9,10 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
-BASE_DIR = Path(__file__).parent
+from paths import BASE_DIR, CHAPTERS_DIR, VOICE_PATH, WORLD_PATH, CHARACTERS_PATH, OUTLINE_PATH, CANON_PATH
 load_dotenv(BASE_DIR / ".env")
 
 WRITER_MODEL = os.environ.get("AUTONOVEL_WRITER_MODEL", "claude-sonnet-4-6")
-CHAPTERS_DIR = BASE_DIR / "chapters"
 
 from llm import call_llm
 
@@ -38,7 +37,7 @@ def call_writer(prompt, max_tokens=16000):
 
 def load_file(path):
     try:
-        return Path(path).read_text()
+        return Path(path).read_text(encoding='utf-8')
     except FileNotFoundError:
         return ""
 
@@ -60,11 +59,11 @@ def main():
     chapter_num = int(sys.argv[1])
     
     # Load all context
-    voice = load_file(BASE_DIR / "voice.md")
-    world = load_file(BASE_DIR / "world.md")
-    characters = load_file(BASE_DIR / "characters.md")
-    outline = load_file(BASE_DIR / "outline.md")
-    canon = load_file(BASE_DIR / "canon.md")
+    voice = load_file(VOICE_PATH)
+    world = load_file(WORLD_PATH)
+    characters = load_file(CHARACTERS_PATH)
+    outline = load_file(OUTLINE_PATH)
+    canon = load_file(CANON_PATH)
     
     # Chapter-specific context
     chapter_outline = extract_chapter_outline(outline, chapter_num)
@@ -73,7 +72,7 @@ def main():
     # Previous chapter (if exists)
     prev_path = CHAPTERS_DIR / f"ch_{chapter_num - 1:02d}.md"
     if prev_path.exists():
-        prev_text = prev_path.read_text()
+        prev_text = prev_path.read_text(encoding='utf-8')
         prev_tail = prev_text[-2000:] if len(prev_text) > 2000 else prev_text
     else:
         prev_tail = "(first chapter -- no previous)"
@@ -151,7 +150,7 @@ Write the chapter now. Full text, beginning to end.
     
     # Save
     out_path = CHAPTERS_DIR / f"ch_{chapter_num:02d}.md"
-    out_path.write_text(result)
+    out_path.write_text(result, encoding='utf-8')
     print(f"Saved to {out_path}", file=sys.stderr)
     print(f"Word count: {len(result.split())}", file=sys.stderr)
     print(result)

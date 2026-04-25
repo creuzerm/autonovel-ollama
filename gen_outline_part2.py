@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
-BASE_DIR = Path(__file__).parent
+from paths import BASE_DIR, OUTLINE_PATH, MYSTERY_PATH
 load_dotenv(BASE_DIR / ".env")
 
 WRITER_MODEL = os.environ.get("AUTONOVEL_WRITER_MODEL", "claude-sonnet-4-6")
@@ -28,13 +28,13 @@ def call_writer(prompt, max_tokens=16000):
         include_reasoning=False
     )
 
-outline_path = BASE_DIR / "outline.md"
+outline_path = OUTLINE_PATH
 if not outline_path.exists():
     print("ERROR: outline.md not found. Run gen_outline.py first.", file=sys.stderr)
     sys.exit(1)
 
-part1 = outline_path.read_text()
-mystery = (BASE_DIR / "MYSTERY.md").read_text()
+part1 = outline_path.read_text(encoding='utf-8')
+mystery = MYSTERY_PATH.read_text(encoding='utf-8')
 
 # Determine where we left off
 import re
@@ -83,7 +83,7 @@ print(f"Calling writer model to continue from Chapter {last_ch}...", file=sys.st
 result = call_writer(prompt)
 
 # Append to outline.md
-with open(outline_path, "a") as f:
+with open(outline_path, "a", encoding='utf-8') as f:
     f.write("\n\n" + result)
 
 print(result)

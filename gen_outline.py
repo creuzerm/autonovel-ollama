@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
-BASE_DIR = Path(__file__).parent
+from paths import BASE_DIR, SEED_PATH, WORLD_PATH, CHARACTERS_PATH, MYSTERY_PATH, CRAFT_PATH, VOICE_PATH, OUTLINE_PATH
 load_dotenv(BASE_DIR / ".env")
 
 WRITER_MODEL = os.environ.get("AUTONOVEL_WRITER_MODEL", "claude-sonnet-4-6")
@@ -29,14 +29,14 @@ def call_writer(prompt, max_tokens=16000):
         include_reasoning=False
     )
 
-seed = (BASE_DIR / "seed.txt").read_text()
-world = (BASE_DIR / "world.md").read_text()
-characters = (BASE_DIR / "characters.md").read_text()
-mystery = (BASE_DIR / "MYSTERY.md").read_text()
-craft = (BASE_DIR / "CRAFT.md").read_text()
+seed = SEED_PATH.read_text(encoding='utf-8')
+world = WORLD_PATH.read_text(encoding='utf-8')
+characters = CHARACTERS_PATH.read_text(encoding='utf-8')
+mystery = MYSTERY_PATH.read_text(encoding='utf-8')
+craft = CRAFT_PATH.read_text(encoding='utf-8')
 
 # Voice Part 2 only
-voice = (BASE_DIR / "voice.md").read_text()
+voice = VOICE_PATH.read_text(encoding='utf-8')
 voice_lines = voice.split('\n')
 try:
     part2_start = next(i for i, l in enumerate(voice_lines) if 'Part 2' in l)
@@ -53,7 +53,7 @@ SEED CONCEPT:
 THE CENTRAL MYSTERY (author's eyes only -- reader discovers gradually):
 {mystery}
 
-WORLD BIBLE:
+WORLD BIBLE (the world these characters inhabit):
 {world}
 
 CHARACTER REGISTRY:
@@ -124,5 +124,6 @@ CONSTRAINTS:
 
 print("Calling writer model...", file=sys.stderr)
 result = call_writer(prompt)
-(BASE_DIR / "outline.md").write_text(result)
+OUTLINE_PATH.write_text(result, encoding='utf-8')
+print(result)
 print(result)

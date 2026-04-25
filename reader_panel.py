@@ -14,7 +14,7 @@ from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
 
-BASE_DIR = Path(__file__).parent
+from paths import BASE_DIR, EDIT_LOGS_DIR
 load_dotenv(BASE_DIR / ".env")
 
 JUDGE_MODEL = os.environ.get("AUTONOVEL_JUDGE_MODEL", "claude-opus-4-6")
@@ -158,7 +158,7 @@ def find_disagreements(results):
     return disagreements
 
 def main():
-    arc_summary = (BASE_DIR / "arc_summary.md").read_text()
+    arc_summary = (BASE_DIR / "arc_summary.md").read_text(encoding='utf-8')
     
     results = {}
     for reader_key, reader_info in READERS.items():
@@ -209,7 +209,7 @@ def main():
         "disagreements": disagreements,
         "timestamp": datetime.now().isoformat()
     }
-    out_path = BASE_DIR / "edit_logs" / "reader_panel.json"
+    out_path = EDIT_LOGS_DIR / "reader_panel.json"
     with open(out_path, "w") as f:
         json.dump(output, f, indent=2)
     print(f"\nSaved to {out_path}")

@@ -23,7 +23,7 @@ from datetime import datetime
 from pathlib import Path
 
 # --- Configuration ---
-BASE_DIR = Path(__file__).parent
+from paths import BASE_DIR, CHAPTERS_DIR, EVAL_LOGS_DIR, VOICE_PATH, WORLD_PATH, CHARACTERS_PATH, OUTLINE_PATH, CANON_PATH
 
 # Load .env file if present
 from dotenv import load_dotenv
@@ -36,8 +36,7 @@ from llm import call_llm, parse_json_response
 # Intentionally different to avoid self-congratulation.
 JUDGE_MODEL = os.environ.get("AUTONOVEL_JUDGE_MODEL", "claude-opus-4-6")
 
-CHAPTERS_DIR = BASE_DIR / "chapters"
-EVAL_LOG_DIR = BASE_DIR / "eval_logs"
+EVAL_LOG_DIR = EVAL_LOGS_DIR
 EVAL_LOG_DIR.mkdir(exist_ok=True)
 
 
@@ -241,7 +240,7 @@ def slop_score(text):
 def load_file(path):
     """Load a text file, return empty string if missing."""
     try:
-        return Path(path).read_text()
+        return Path(path).read_text(encoding='utf-8')
     except FileNotFoundError:
         return ""
 
@@ -249,11 +248,11 @@ def load_file(path):
 def load_layer_files():
     """Load all planning layer files."""
     return {
-        "voice": load_file(BASE_DIR / "voice.md"),
-        "world": load_file(BASE_DIR / "world.md"),
-        "characters": load_file(BASE_DIR / "characters.md"),
-        "outline": load_file(BASE_DIR / "outline.md"),
-        "canon": load_file(BASE_DIR / "canon.md"),
+        "voice": load_file(VOICE_PATH),
+        "world": load_file(WORLD_PATH),
+        "characters": load_file(CHARACTERS_PATH),
+        "outline": load_file(OUTLINE_PATH),
+        "canon": load_file(CANON_PATH),
     }
 
 
@@ -267,7 +266,7 @@ def load_all_chapters():
     chapters = {}
     for f in sorted(glob.glob(str(CHAPTERS_DIR / "ch_*.md"))):
         num = int(re.search(r'ch_(\d+)', f).group(1))
-        chapters[num] = Path(f).read_text()
+        chapters[num] = Path(f).read_text(encoding='utf-8')
     return chapters
 
 

@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
-BASE_DIR = Path(__file__).parent
+from paths import BASE_DIR, CHAPTERS_DIR, VOICE_PATH, CHARACTERS_PATH, WORLD_PATH
 load_dotenv(BASE_DIR / ".env")
 
 WRITER_MODEL = os.environ.get("AUTONOVEL_WRITER_MODEL", "claude-sonnet-4-6")
@@ -35,20 +35,20 @@ def main():
     ch_num = int(sys.argv[1])
     brief_file = sys.argv[2]
     
-    voice = (BASE_DIR / "voice.md").read_text()
-    characters = (BASE_DIR / "characters.md").read_text()
-    world = (BASE_DIR / "world.md").read_text()
-    brief = Path(brief_file).read_text()
+    voice = VOICE_PATH.read_text(encoding='utf-8')
+    characters = CHARACTERS_PATH.read_text(encoding='utf-8')
+    world = WORLD_PATH.read_text(encoding='utf-8')
+    brief = Path(brief_file).read_text(encoding='utf-8')
     
     # Load adjacent chapters for continuity
-    prev_path = BASE_DIR / "chapters" / f"ch_{ch_num - 1:02d}.md"
-    next_path = BASE_DIR / "chapters" / f"ch_{ch_num + 1:02d}.md"
-    prev_tail = prev_path.read_text()[-2000:] if prev_path.exists() else "(first chapter)"
-    next_head = next_path.read_text()[:1500] if next_path.exists() else "(last chapter)"
+    prev_path = CHAPTERS_DIR / f"ch_{ch_num - 1:02d}.md"
+    next_path = CHAPTERS_DIR / f"ch_{ch_num + 1:02d}.md"
+    prev_tail = prev_path.read_text(encoding='utf-8')[-2000:] if prev_path.exists() else "(first chapter)"
+    next_head = next_path.read_text(encoding='utf-8')[:1500] if next_path.exists() else "(last chapter)"
     
     # Load old version if exists
-    old_path = BASE_DIR / "chapters" / f"ch_{ch_num:02d}.md"
-    old_text = old_path.read_text() if old_path.exists() else "(no existing draft)"
+    old_path = CHAPTERS_DIR / f"ch_{ch_num:02d}.md"
+    old_text = old_path.read_text(encoding='utf-8') if old_path.exists() else "(no existing draft)"
     
     prompt = f"""Rewrite Chapter {ch_num} of "The Second Son of the House of Bells."
 
@@ -90,10 +90,11 @@ Write the FULL revised chapter now."""
     print(f"Rewriting Chapter {ch_num}...", file=sys.stderr)
     result = call_writer(prompt)
     
-    out_path = BASE_DIR / "chapters" / f"ch_{ch_num:02d}.md"
-    out_path.write_text(result)
+    out_path = CHAPTERS_DIR / f"ch_{ch_num:02d}.md"
+    out_path.write_text(result, encoding='utf-8')
     print(f"Saved to {out_path}", file=sys.stderr)
     print(f"Word count: {len(result.split())}", file=sys.stderr)
+
 
 if __name__ == "__main__":
     main()

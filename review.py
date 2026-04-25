@@ -20,14 +20,13 @@ from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
 
-BASE_DIR = Path(__file__).parent
+from paths import BASE_DIR, CHAPTERS_DIR, EDIT_LOGS_DIR, OUTLINE_PATH
 load_dotenv(BASE_DIR / ".env", override=True)
 
 # Use Opus for reviews — it's the best at literary analysis
 REVIEW_MODEL = os.environ.get("AUTONOVEL_REVIEW_MODEL", "claude-opus-4-6")
 
-CHAPTERS_DIR = BASE_DIR / "chapters"
-LOGS_DIR = BASE_DIR / "edit_logs"
+LOGS_DIR = EDIT_LOGS_DIR
 
 from llm import call_llm
 
@@ -46,15 +45,14 @@ def call_opus(prompt, max_tokens=8000):
 
 def get_title():
     """Extract novel title from first chapter or outline."""
-    outline = BASE_DIR / "outline.md"
-    if outline.exists():
-        first_line = outline.read_text().split("\n")[0]
+    if OUTLINE_PATH.exists():
+        first_line = OUTLINE_PATH.read_text(encoding='utf-8').split("\n")[0]
         title = first_line.lstrip("# ").strip()
         if title:
             return title
     ch1 = CHAPTERS_DIR / "ch_01.md"
     if ch1.exists():
-        first_line = ch1.read_text().split("\n")[0]
+        first_line = ch1.read_text(encoding='utf-8').split("\n")[0]
         return first_line.lstrip("# ").strip()
     return "Untitled Novel"
 
@@ -68,7 +66,7 @@ def build_manuscript():
     
     parts = []
     for ch in chapters:
-        parts.append(ch.read_text())
+        parts.append(ch.read_text(encoding='utf-8'))
     
     manuscript = "\n\n---\n\n".join(parts)
     wc = len(manuscript.split())
@@ -208,12 +206,12 @@ def cmd_review(args):
     parsed["title"] = title
     parsed["word_count"] = len(manuscript.split())
     
-    log_path.write_text(json.dumps(parsed, indent=2, default=str))
+    log_path.write_text(json.dumps(parsed, indent=2, default=str), encoding='utf-8')
     print(f"\nReview saved to {log_path}", file=sys.stderr)
     
     # Save human-readable copy
     if args.output:
-        Path(args.output).write_text(review_text)
+        Path(args.output).write_text(review_text, encoding='utf-8')
         print(f"Human-readable copy: {args.output}", file=sys.stderr)
     
     # Print summary
@@ -237,7 +235,7 @@ def cmd_parse(args):
         print("No reviews found. Run: review.py first")
         sys.exit(1)
     
-    latest = json.loads(reviews[0].read_text())
+    latest = json.loads(reviews[0].read_text(encoding='utf-8'))
     
     print(f"Latest review: {latest.get('timestamp', 'unknown')}")
     print(f"Stars: {latest.get('stars', '?')}")

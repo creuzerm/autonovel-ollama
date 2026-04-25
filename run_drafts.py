@@ -30,6 +30,8 @@ def spot_eval(ch):
         return float(m_overall.group(1)), int(m_raw.group(1))
     return None, None
 
+from paths import STATE_PATH
+
 # Chapters to draft
 chapters = list(range(11, 25))
 spot_check_chapters = {13, 17, 20, 24}  # midpoint, all-is-lost, break-into-3, finale
@@ -72,14 +74,14 @@ for ch in chapters:
     results.append((ch, words, slop['slop_penalty'], score))
     
     # Git commit
-    run(f"cd /home/jeffq/autonovel && git add chapters/ch_{ch:02d}.md state.json")
+    run(f"git add chapters/ch_{ch:02d}.md state.json")
     
     # Update state.json
-    with open("state.json") as f:
+    with open(STATE_PATH) as f:
         state = json.load(f)
     state["current_focus"] = f"ch_{ch:02d}"
     state["chapters_drafted"] = ch
-    with open("state.json", "w") as f:
+    with open(STATE_PATH, "w") as f:
         json.dump(state, f, indent=2)
 
 print(f"\n\n{'='*60}")

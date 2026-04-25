@@ -15,9 +15,9 @@ import re
 import sys
 from pathlib import Path
 
-BASE = Path(__file__).resolve().parent
-CHAPTERS_DIR = BASE / "chapters"
-EDIT_LOGS_DIR = BASE / "edit_logs"
+from paths import BASE_DIR, CHAPTERS_DIR, EDIT_LOGS_DIR
+
+BASE = BASE_DIR
 
 VALID_TYPES = {"OVER-EXPLAIN", "REDUNDANT", "FAT", "TELL", "STRUCTURAL", "GENERIC"}
 MIN_QUOTE_LEN = 25

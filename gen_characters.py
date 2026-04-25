@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
-BASE_DIR = Path(__file__).parent
+from paths import BASE_DIR, SEED_PATH, WORLD_PATH, VOICE_PATH, CHARACTERS_PATH
 load_dotenv(BASE_DIR / ".env")
 
 WRITER_MODEL = os.environ.get("AUTONOVEL_WRITER_MODEL", "claude-sonnet-4-6")
@@ -32,11 +32,11 @@ def call_writer(prompt, max_tokens=16000):
         include_reasoning=False
     )
 
-seed = (BASE_DIR / "seed.txt").read_text()
-world = (BASE_DIR / "world.md").read_text()
+seed = SEED_PATH.read_text(encoding='utf-8')
+world = WORLD_PATH.read_text(encoding='utf-8')
 
 # Voice Part 2 only
-voice = (BASE_DIR / "voice.md").read_text()
+voice = VOICE_PATH.read_text(encoding='utf-8')
 voice_lines = voice.split('\n')
 try:
     part2_start = next(i for i, l in enumerate(voice_lines) if 'Part 2' in l)
@@ -128,5 +128,6 @@ IMPORTANT:
 
 print("Calling writer model...", file=sys.stderr)
 result = call_writer(prompt)
-(BASE_DIR / "characters.md").write_text(result)
+CHARACTERS_PATH.write_text(result, encoding='utf-8')
+print(result)
 print(result)
