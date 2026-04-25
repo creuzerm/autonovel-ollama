@@ -3,6 +3,7 @@ import json
 import re
 import httpx
 import sys
+import time
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -63,66 +64,69 @@ def call_llm(prompt, system_prompt="You are a helpful assistant.", model=None, m
         "options": {
             "num_predict": max_tokens if max_tokens > 0 else 4000,
             "temperature": temperature,
-            "num_ctx": 262144 # Match the context window seen in ollama ps
+            "num_ctx": 260000 # Increased per user preference for long-context support
         }
     }
     
     response_format = {"type": "json_object"} if json_mode else None
 
-    try:
-        if stream:
-            full_content = ""
-            response = client.chat.completions.create(
-                model=model,
-                messages=messages,
-                max_tokens=max_tokens,
-                temperature=temperature,
-                response_format=response_format,
-                extra_body=extra_body,
-                stream=True
-            )
-            print("Response: ", end="", flush=True)
-            for chunk in response:
-                delta = chunk.choices[0].delta
-                content = delta.content or ""
-                reasoning = getattr(delta, 'reasoning', None) or getattr(delta, 'reasoning_content', None) or ""
-                
-                if reasoning:
-                    # Print reasoning to show progress
-                    print(f"\033[90m{reasoning}\033[0m", end="", flush=True)
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            if stream:
+                full_content = ""
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    response_format=response_format,
+                    extra_body=extra_body,
+                    stream=True
+                )
+                print("Response: ", end="", flush=True)
+                for chunk in response:
+                    delta = chunk.choices[0].delta
+                    content = delta.content or ""
+                    reasoning = getattr(delta, 'reasoning', None) or getattr(delta, 'reasoning_content', None) or ""
                     
-                    if include_reasoning:
-                        full_content += reasoning
+                    if reasoning:
+                        # Print reasoning in dim gray to show progress
+                        print(f"\033[90m{reasoning}\033[0m", end="", flush=True)
+                        
+                        if include_reasoning:
+                            full_content += reasoning
+                    
+                    if content:
+                        print(content, end="", flush=True)
+                        full_content += content
                 
-                if content:
-                    print(content, end="", flush=True)
-                    full_content += content
-            
-            # If after the loop full_content is still empty but we had reasoning, 
-            # maybe the reasoning WAS the response (or we want to capture it anyway).
-            # For qwen3 in some modes this might be true.
-            if not full_content and reasoning:
-                 # This is a bit of a hack but helps if the model "thinks" the answer but doesn't "say" it.
-                 # Actually, let's just use a more robust way to capture it.
-                 pass
-            print("\n") # New line after stream ends
-            return full_content
-        else:
-            response = client.chat.completions.create(
-                model=model,
-                messages=messages,
-                max_tokens=max_tokens,
-                temperature=temperature,
-                response_format=response_format,
-                extra_body=extra_body
-            )
-            message = response.choices[0].message
-            content = message.content or ""
-            reasoning = getattr(message, 'reasoning', None) or getattr(message, 'reasoning_content', None) or ""
-            return (reasoning + content).strip() if include_reasoning else content.strip()
-    except Exception as e:
-        print(f"Error calling LLM: {e}")
-        raise
+                print("\n") # New line after stream ends
+                return full_content
+            else:
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    response_format=response_format,
+                    extra_body=extra_body
+                )
+                message = response.choices[0].message
+                content = message.content or ""
+                reasoning = getattr(message, 'reasoning', None) or getattr(message, 'reasoning_content', None) or ""
+                return (reasoning + content).strip() if include_reasoning else content.strip()
+        except (httpx.ReadError, httpx.RemoteProtocolError) as e:
+            if attempt < max_retries - 1:
+                wait_time = 2 ** attempt
+                print(f"\nConnection error: {e}. Retrying in {wait_time}s (attempt {attempt+2}/{max_retries})...")
+                time.sleep(wait_time)
+            else:
+                print(f"\nError calling LLM after {max_retries} attempts: {e}")
+                raise
+        except Exception as e:
+            print(f"\nError calling LLM: {e}")
+            raise
 
 def parse_json_response(text):
     """Cleanly parse JSON (object or array) from LLM response."""
